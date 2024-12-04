@@ -14,12 +14,17 @@ unsigned int __stdcall ThreadFunc(void* arg)
 	{
 		while (1)
 		{
-		int data = InterlockedIncrement(&g_data);
 			for (int i = 0; i < 10000; i++)
+			{
+			int data = InterlockedIncrement(&g_data);
 				g_Stack.Push(data);
+			}
 
 			for (int i = 0; i < 10000; i++)
-				g_Stack.Pop();
+			{
+				int data = InterlockedDecrement(&g_data);
+				std::cout << g_Stack.Pop() << std::endl;
+			}
 		}
 	}
 }
@@ -28,7 +33,7 @@ int main()
 {
 	HANDLE _handle[2];
 
-	_handle[0] = (HANDLE) _beginthreadex(NULL, 0, ThreadFunc, nullptr, CREATE_SUSPENDED, nullptr);
+	_handle[0] = (HANDLE)_beginthreadex(NULL, 0, ThreadFunc, nullptr, CREATE_SUSPENDED, nullptr);
 	_handle[1] = (HANDLE)_beginthreadex(NULL, 0, ThreadFunc, nullptr, CREATE_SUSPENDED, nullptr);
 
 	ResumeThread(_handle[0]);
@@ -36,7 +41,7 @@ int main()
 
 	while (true)
 	{
-		
+
 	}
 }
 
