@@ -33,8 +33,6 @@ int main()
 
 	ResumeThread(_handle[0]);
 	ResumeThread(_handle[1]);
-//_beginthreadex(NULL, 0, ThreadFunc, nullptr, 0, nullptr);
-	//_beginthreadex(NULL, 0, ThreadFunc, nullptr, 0, nullptr);
 
 	while (true)
 	{
