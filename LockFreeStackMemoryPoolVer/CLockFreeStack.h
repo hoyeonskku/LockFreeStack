@@ -39,8 +39,7 @@ public:
 		Node<T>* pNewNodeValue;
 		pNewNode = _pool.Alloc();
 		pNewNode->_value = data;
-		unsigned long long id = InterlockedIncrement(&_id);
-		pNewNodeValue = (Node<T>*)((id << 47) | (unsigned long long) pNewNode);
+		pNewNodeValue = (Node<T>*)((InterlockedIncrement(&_id) << 47) | (unsigned long long) pNewNode);
 		do
 		{
 			pNewNode->_pNext = _pTopNodeValue;
