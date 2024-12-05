@@ -3,7 +3,8 @@
 #include "CObjectPool.h"
 
 #define QueueSize 5000
-
+#define MAKE_NODE(value) ((unsigned long long)pReleaseNodeValue & (unsigned long long) 0x7FFFFFFFFFFF)
+#define MAKE_VALUE(id, node) ((InterlockedIncrement(&_id) << 47) | (unsigned long long) pNewNode)
 enum EventType
 {
 	push,
@@ -37,28 +38,27 @@ public:
 	{
 		Node<T>* pNewNode;
 		Node<T>* pNewNodeValue;
+		Node<T>* pNewNodeNextValue;
 		pNewNode = _pool.Alloc();
 		pNewNode->_value = data;
 		pNewNodeValue = (Node<T>*)((InterlockedIncrement(&_id) << 47) | (unsigned long long) pNewNode);
 		do
 		{
 			pNewNode->_pNext = _pTopNodeValue;
+			pNewNodeNextValue = pNewNode->_pNext;
 		}
 		// top이 저장한 값과 같은 경우에만 Push, 노드를 새로운 top으로 변경
-		while ((Node<T>*) InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pNewNodeValue, (unsigned long long) pNewNode->_pNext) != pNewNode->_pNext);
+		while ((Node<T>*) InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pNewNodeValue, (unsigned long long) pNewNodeNextValue) != pNewNodeNextValue);
 	}
 
 	T& Pop()
 	{
 		Node<T>* pReleaseNode;
 		Node<T>* pReleaseNodeValue;
-		unsigned long long releaseNodeId;
 		do
 		{
 			pReleaseNodeValue = _pTopNodeValue;
-			// 어쩌피 태생이 ID이기에 & 0x1FFFF 안해줘도 됨.
-			releaseNodeId = (unsigned long long)pReleaseNodeValue >> 47;
-			pReleaseNode = (Node<T>*) ((unsigned long long)pReleaseNodeValue & (unsigned long long) 0x7FFFFFFFFFFF);
+			pReleaseNode = (Node<T>*) MAKE_NODE(pReleaseNodeValue);
 			/*if (!Release)
 				return;*/
 		}

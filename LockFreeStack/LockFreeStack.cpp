@@ -15,10 +15,10 @@ unsigned int __stdcall ThreadFunc(void* arg)
 		while (1)
 		{
 		int data = InterlockedIncrement(&g_data);
-			for (int i = 0; i < 10000; i++)
+			for (int i = 0; i < 5; i++)
 				g_Stack.Push(data);
 
-			for (int i = 0; i < 10000; i++)
+			for (int i = 0; i < 5; i++)
 				g_Stack.Pop();
 		}
 	}

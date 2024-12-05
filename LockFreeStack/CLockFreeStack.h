@@ -2,6 +2,8 @@
 #include "Windows.h"
 
 #define QueueSize 5000
+#define MAKE_NODE(value) ((unsigned long long)pReleaseNodeValue & (unsigned long long) 0x7FFFFFFFFFFF)
+#define MAKE_VALUE(id, node) ((InterlockedIncrement(&_id) << 47) | (unsigned long long) pNewNode)
 
 enum EventType
 {
@@ -35,7 +37,7 @@ public:
 		 Node<T>* pNewNodeValue;
 		 Node<T>* pNewNodeNextValue;
 		 pNewNode = new Node<T>(data);
-		 pNewNodeValue = (Node<T>*)((InterlockedIncrement(&_id) << 47) | (unsigned long long) pNewNode);
+		 pNewNodeValue = (Node<T>*)MAKE_VALUE(_id, pNewNode);
 		 do 
 		 {
 			 pNewNode->_pNext = _pTopNodeValue;
@@ -49,13 +51,10 @@ public:
 	 {
 		 Node<T>* pReleaseNode;
 		 Node<T>* pReleaseNodeValue;
-		 unsigned long long releaseNodeId;
 		 do
 		 {
 			 pReleaseNodeValue = _pTopNodeValue;
-			 // ¾îÂ¼ÇÇ ÅÂ»ýÀÌ IDÀÌ±â¿¡ & 0x1FFFF ¾ÈÇØÁàµµ µÊ.
-			 releaseNodeId = (unsigned long long)pReleaseNodeValue >> 47;
-			 pReleaseNode = (Node<T>*) ((unsigned long long)pReleaseNodeValue & (unsigned long long) 0x7FFFFFFFFFFF);
+			 pReleaseNode = (Node<T>*) MAKE_NODE(pReleaseNodeValue);
 			 /*if (!Release)
 				 return;*/
 		 }
