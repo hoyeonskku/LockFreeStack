@@ -12,6 +12,13 @@
 #define MAKE_VALUE(id, node) ((InterlockedIncrement(&id) << 47) | (unsigned long long) node)
 #define EXTRACT_ID(value) (unsigned long long)value >> 47;
 
+// 노드를 생성 삭제하는게 아님
+// 노드에 대한 추가적인 할당 해제 없게 만들었음
+// 메모리풀은 노드를 떼서 버려버렸음. 
+// 리턴타입이 포인터니깐 이걸 붙여서 줬음. 밸류타입이었으면 불가능했음.
+// 풀은 우리가 리턴타입이 포인터로 만들었고, 스택은 리턴타입이 탬플릿 타입이기 때문에 이게 가능해졌다.
+// 그렇기에 디커밋에 대한 것이 해결이 된 것이다.
+
 template <class DATA, bool bPlacementNew = false>
 class CMemoryPool
 {
@@ -212,6 +219,7 @@ public:
 #ifndef _DEBUG
 		st_BLOCK_NODE* pBlockNode = (st_BLOCK_NODE*)((char*)pData - offsetof(st_BLOCK_NODE, _data));
 		st_BLOCK_NODE* pBlockValue = (st_BLOCK_NODE*)MAKE_VALUE(_id, pBlockNode);
+		st_BLOCK_NODE* pBlockNextValue;
 		if constexpr (bPlacementNew == true)
 		{
 			pBlockNode->_data.~DATA();
@@ -219,9 +227,10 @@ public:
 		do
 		{
 			pBlockNode->_pNext = _pTopNodeValue;
+			pBlockNextValue = pBlockNode->_pNext;
 		}
 		// top이 저장한 값과 같은 경우에만 Push, 노드를 새로운 top으로 변경
-		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pBlockValue, (unsigned long long) pBlockNode->_pNext) != pBlockNode->_pNext);
+		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pBlockValue, (unsigned long long) pBlockNode->_pNext) != pBlockNextValue);
 		return true;
 #endif
 	};
