@@ -2,11 +2,15 @@
 #define  __MEMORY_POOL__
 #pragma once
 
+
 #include <new.h>
 #include <iostream>
 #include <stack>
 #include <assert.h>
 #include <Windows.h>
+#define MAKE_NODE(value) ((unsigned long long)value & 0x7FFFFFFFFFFF)
+#define MAKE_VALUE(id, node) ((InterlockedIncrement(&id) << 47) | (unsigned long long) node)
+#define EXTRACT_ID(value) (unsigned long long)value >> 47;
 
 template <class DATA, bool bPlacementNew = false>
 class CMemoryPool
@@ -78,7 +82,7 @@ public:
 				new ((char*)newNode + offsetof(st_BLOCK_NODE, _data)) DATA();
 			}
 			newNode->_pNext = _pTopNodeValue;
-			_pTopNodeValue = (st_BLOCK_NODE*)((unsigned long long) newNode | ((_id++) << 47));
+			_pTopNodeValue = (st_BLOCK_NODE*)MAKE_VALUE(_id, newNode);
 		}
 #endif
 	};
@@ -87,7 +91,7 @@ public:
 	{
 		while (_pTopNodeValue)
 		{
-			st_BLOCK_NODE* temp = (st_BLOCK_NODE*)(((unsigned long long) _pTopNodeValue) & 0x7FFFFFFFFFFF);
+			st_BLOCK_NODE* temp = (st_BLOCK_NODE*)MAKE_NODE(_pTopNodeValue);
 
 			_pTopNodeValue = temp->_pNext;
 			if constexpr (bPlacementNew)
@@ -156,8 +160,8 @@ public:
 		{
 			pReleaseNodeValue = _pTopNodeValue;
 			// ¾îÂ¼ÇÇ ÅÂ»ýÀÌ IDÀÌ±â¿¡ & 0x1FFFF ¾ÈÇØÁàµµ µÊ.
-			releaseNodeId = (unsigned long long)pReleaseNodeValue >> 47;
-			pReleaseNode = (st_BLOCK_NODE*)((unsigned long long)pReleaseNodeValue & (unsigned long long) 0x7FFFFFFFFFFF);
+			releaseNodeId = EXTRACT_ID(pReleaseNodeValue);
+			pReleaseNode = (st_BLOCK_NODE*)MAKE_NODE(pReleaseNodeValue);
 			/*if (!Release)
 				return;*/
 		}
@@ -207,7 +211,7 @@ public:
 #endif
 #ifndef _DEBUG
 		st_BLOCK_NODE* pBlockNode = (st_BLOCK_NODE*)((char*)pData - offsetof(st_BLOCK_NODE, _data));
-		st_BLOCK_NODE* pBlockValue = (st_BLOCK_NODE*)((unsigned long long)pBlockNode | (InterlockedIncrement(&_id) << 47));
+		st_BLOCK_NODE* pBlockValue = (st_BLOCK_NODE*)MAKE_VALUE(_id, pBlockNode);
 		if constexpr (bPlacementNew == true)
 		{
 			pBlockNode->_data.~DATA();

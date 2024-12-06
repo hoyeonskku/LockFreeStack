@@ -3,8 +3,7 @@
 #include "CObjectPool.h"
 
 #define QueueSize 5000
-#define MAKE_NODE(value) ((unsigned long long)pReleaseNodeValue & (unsigned long long) 0x7FFFFFFFFFFF)
-#define MAKE_VALUE(id, node) ((InterlockedIncrement(&_id) << 47) | (unsigned long long) pNewNode)
+
 enum EventType
 {
 	push,
@@ -41,7 +40,7 @@ public:
 		Node<T>* pNewNodeNextValue;
 		pNewNode = _pool.Alloc();
 		pNewNode->_value = data;
-		pNewNodeValue = (Node<T>*)((InterlockedIncrement(&_id) << 47) | (unsigned long long) pNewNode);
+		pNewNodeValue = (Node<T>*)MAKE_VALUE(_id, pNewNode);
 		do
 		{
 			pNewNode->_pNext = _pTopNodeValue;

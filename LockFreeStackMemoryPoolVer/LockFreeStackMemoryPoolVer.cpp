@@ -8,9 +8,6 @@ CLockFreeStack<int> g_Stack;
 
 unsigned int __stdcall ThreadFunc(void* arg)
 {
-	/*while (!boolean1)
-	{
-	}*/
 	{
 		while (1)
 		{
