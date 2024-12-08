@@ -33,7 +33,7 @@ public:
 		char guardAfter[8];
 #endif
 #ifndef _DEBUG
-		st_BLOCK_NODE* _pNext;          // 다음 블럭 노드 포인터
+		st_BLOCK_NODE* _pNextValue;          // 다음 블럭 노드 포인터
 		DATA _data;                       // T 타입의 데이터
 #endif
 	};
@@ -79,7 +79,8 @@ public:
 
 #ifndef _DEBUG
 		// 블록 초기화
-		st_BLOCK_NODE* newNode;
+		st_BLOCK_NODE* newNode = nullptr;
+		st_BLOCK_NODE* nextNode = nullptr;
 		for (int i = 0; i < iBlockNum; i++)
 		{
 			newNode = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE));
@@ -88,19 +89,20 @@ public:
 			{
 				new ((char*)newNode + offsetof(st_BLOCK_NODE, _data)) DATA();
 			}
-			newNode->_pNext = _pTopNodeValue;
-			_pTopNodeValue = (st_BLOCK_NODE*)MAKE_VALUE(_id, newNode);
+			newNode->_pNextValue = (st_BLOCK_NODE*) MAKE_VALUE(_id, nextNode);
+			nextNode = newNode;
 		}
 #endif
 	};
 
 	~CMemoryPool()
 	{
-		while (_pTopNodeValue)
+		st_BLOCK_NODE* topNode = (st_BLOCK_NODE*)MAKE_NODE(_pTopNodeValue);
+		while (topNode)
 		{
-			st_BLOCK_NODE* temp = (st_BLOCK_NODE*)MAKE_NODE(_pTopNodeValue);
+			st_BLOCK_NODE* temp = topNode;
 
-			_pTopNodeValue = temp->_pNext;
+			topNode = (st_BLOCK_NODE*)MAKE_NODE(temp->_pNextValue);
 			if constexpr (bPlacementNew)
 			{
 				temp->_data.~DATA();  // 메모리 해제
@@ -121,7 +123,6 @@ public:
 
 		st_BLOCK_NODE* pReleaseNode;
 		st_BLOCK_NODE* pReleaseNodeValue;
-		unsigned long long releaseNodeId;
 		if (_pTopNodeValue == nullptr)
 		{
 			pReleaseNode = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE));
@@ -137,8 +138,6 @@ public:
 		do
 		{
 			pReleaseNodeValue = _pTopNodeValue;
-			// 어쩌피 태생이 ID이기에 & 0x1FFFF 안해줘도 됨.
-			releaseNodeId = (unsigned long long)pReleaseNodeValue >> 47;
 			pReleaseNode = (st_BLOCK_NODE*)((unsigned long long)pReleaseNodeValue & (unsigned long long) 0x7FFFFFFFFFFF);
 			/*if (!Release)
 				return;*/
@@ -153,27 +152,26 @@ public:
 #ifndef _DEBUG
 		st_BLOCK_NODE* pReleaseNode;
 		st_BLOCK_NODE* pReleaseNodeValue;
-		unsigned long long releaseNodeId;
-		if (_pTopNodeValue == nullptr)
-		{
-			pReleaseNode = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE));
-			if constexpr (bPlacementNew == true)
-			{
-				new ((char*)pReleaseNode + offsetof(st_BLOCK_NODE, _data)) DATA;
-			}
-			return (DATA*)((char*)pReleaseNode + offsetof(st_BLOCK_NODE, _data));
-		}
+		st_BLOCK_NODE* pReleaseNextNodeValue;
 		do
 		{
 			pReleaseNodeValue = _pTopNodeValue;
-			// 어쩌피 태생이 ID이기에 & 0x1FFFF 안해줘도 됨.
-			releaseNodeId = EXTRACT_ID(pReleaseNodeValue);
 			pReleaseNode = (st_BLOCK_NODE*)MAKE_NODE(pReleaseNodeValue);
+			if (pReleaseNode == nullptr)
+			{
+				pReleaseNode = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE));
+				if constexpr (bPlacementNew == true)
+				{
+					new ((char*)pReleaseNode + offsetof(st_BLOCK_NODE, _data)) DATA;
+				}
+				return (DATA*)((char*)pReleaseNode + offsetof(st_BLOCK_NODE, _data));
+			}
+			pReleaseNextNodeValue =pReleaseNode->_pNextValue;
 			/*if (!Release)
 				return;*/
 		}
 		// top이 제거하려는 노드인 경우에만 Pop, next를 새로운 top으로 변경
-		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pReleaseNode->_pNext, (unsigned long long)pReleaseNodeValue) != pReleaseNodeValue);
+		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pReleaseNextNodeValue, (unsigned long long)pReleaseNodeValue) != pReleaseNodeValue);
 		return (DATA*)((unsigned long long)((char*)pReleaseNode + offsetof(st_BLOCK_NODE, _data)));
 #endif
 	};
@@ -208,9 +206,10 @@ public:
 		do
 		{
 			pBlockNode->_pNext = _pTopNodeValue;
+			pBlockNextValue = pBlockNode->_pNext;
 		}
 		// top이 저장한 값과 같은 경우에만 Push, 노드를 새로운 top으로 변경
-		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pBlockValue, (unsigned long long) pBlockNode->_pNext) != pBlockNode->_pNext);
+		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pBlockValue, (unsigned long long) pBlockNextValue) != pBlockNextValue);
 		m_iUseCount--;
 		return true;
 
@@ -226,11 +225,11 @@ public:
 		}
 		do
 		{
-			pBlockNode->_pNext = _pTopNodeValue;
-			pBlockNextValue = pBlockNode->_pNext;
+			pBlockNextValue = _pTopNodeValue;
+			pBlockNode->_pNextValue = pBlockNextValue;
 		}
 		// top이 저장한 값과 같은 경우에만 Push, 노드를 새로운 top으로 변경
-		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pBlockValue, (unsigned long long) pBlockNode->_pNext) != pBlockNextValue);
+		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) &_pTopNodeValue, (unsigned long long) pBlockValue, (unsigned long long) pBlockNextValue) != pBlockNextValue);
 		return true;
 #endif
 	};

@@ -14,49 +14,114 @@ struct TestStruct
 {
 	int a = 10;
 };
-CMemoryPool<TestStruct, true> g_pool(10000);
+//CMemoryPool<TestStruct, true> g_pool(10000);
 
+unsigned long long g_data = 0;
+CLockFreeStack<unsigned long long> g_Stack;
 
+unsigned long long arr[10001];
 
 unsigned int __stdcall ThreadFunc(void* arg)
 {
-	TestStruct* arr[1000];
-
-	for (int i = 0; i < 1000; i++)
+	/*while (!boolean1)
 	{
-		arr[i] = g_pool.Alloc();
-		arr[i]->a++;
+	}*/
+	{
+
+			for (int i = 0; i < 2000; i++)
+			{
+				int data = InterlockedIncrement(&g_data);
+				g_Stack.Push(data);
+			}
+
+			for (int i = 0; i < 2000; i++)
+			{
+				unsigned long long a;
+				g_Stack.Pop(a);
+				arr[a]++;
+				if (arr[a] != 1)
+					DebugBreak();
+			}
+		
 	}
 
-	for (int i = 0; i < 1000; i++)
-	{
-		if (arr[i]->a == 10)
-			DebugBreak();
-
-		arr[i]->a--;
-	}
-	
-	for (int i = 0; i < 1000; i++)
-	{
-		if (arr[i]->a != 10)
-			DebugBreak();
-		g_pool.Free(arr[i]);
-	}
-
-	return 0;
+	return true;
 }
+//unsigned int __stdcall ThreadFunc(void* arg)
+//{
+//	TestStruct* arr[10];
+//
+//	while (true)
+//	{
+//		for (int i = 0; i < 10; i++)
+//		{
+//			arr[i] = g_pool.Alloc();
+//			arr[i]->a++;
+//		}
+//
+//		for (int i = 0; i < 10; i++)
+//		{
+//			if (arr[i]->a != 11)
+//				DebugBreak();
+//
+//			arr[i]->a--;
+//		}
+//
+//		for (int i = 0; i < 10; i++)
+//		{
+//			if (arr[i]->a != 10)
+//				DebugBreak();
+//			g_pool.Free(arr[i]);
+//		}
+//	}
+//
+//	return 0;
+//}
+
+//unsigned int __stdcall ThreadFunc(void* arg)
+//{
+//	TestStruct* arr[10];
+//
+//	while (true)
+//	{
+//		for (int i = 0; i < 10; i++)
+//		{
+//			arr[i] = g_pool.Alloc();
+//			arr[i]->a++;
+//		}
+//
+//		for (int i = 0; i < 10; i++)
+//		{
+//			if (arr[i]->a != 11)
+//				DebugBreak();
+//
+//			arr[i]->a--;
+//		}
+//
+//		for (int i = 0; i < 10; i++)
+//		{
+//			if (arr[i]->a != 10)
+//				DebugBreak();
+//			g_pool.Free(arr[i]);
+//		}
+//	}
+//
+//	return 0;
+//}
 
 int main()
 {
-	HANDLE _handle[4];
-	while (true)
+	HANDLE _handle[5];
+	for (int i = 0; i < 5; i++)
 	{
-		_handle[0] = (HANDLE)_beginthreadex(NULL, 0, ThreadFunc, nullptr, NULL, nullptr);
-		_handle[1] = (HANDLE)_beginthreadex(NULL, 0, ThreadFunc, nullptr, NULL, nullptr);
-		_handle[2] = (HANDLE)_beginthreadex(NULL, 0, ThreadFunc, nullptr, NULL, nullptr);
-		_handle[3] = (HANDLE)_beginthreadex(NULL, 0, ThreadFunc, nullptr, NULL, nullptr);
+		_handle[i] = (HANDLE)_beginthreadex(NULL, 0, ThreadFunc, nullptr, NULL, nullptr);
+	}
+	WaitForMultipleObjects(5, _handle, true, INFINITE);
 
-		WaitForMultipleObjects(4, _handle, true, INFINITE);
+	for (int i = 1; i < 10001; i++)
+	{
+		if (arr[i] != 1)
+			DebugBreak();
 	}
 }
 
