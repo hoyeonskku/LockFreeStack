@@ -12,16 +12,21 @@
 
 struct TestStruct
 {
-	TestStruct()
+	TestStruct(int data)
 	{
-		a = 11;
+		a = data;
+	}
+
+	virtual void func()
+	{
+
 	}
 	int a = 10;
 };
 //CMemoryPool<TestStruct, true> g_pool(10000);
 
 unsigned long long g_data = 0;
-CLockFreeStack<unsigned long long> g_Stack;
+CLockFreeStack<TestStruct> g_Stack;
 //CLockFreeStack<TestStruct> g_Stack1;
 
 unsigned long long arr[10001];
@@ -36,15 +41,15 @@ unsigned int __stdcall ThreadFunc(void* arg)
 		for (int i = 0; i < 2000; i++)
 		{
 			int data = InterlockedIncrement(&g_data);
-			g_Stack.Push(data);
+			g_Stack.Push(TestStruct(data));
 		}
 
 		for (int i = 0; i < 2000; i++)
 		{
-			unsigned long long a;
+			TestStruct a(10);
 			g_Stack.Pop(a);
-			arr[a]++;
-			if (arr[a] != 1)
+			arr[a.a]++;
+			if (arr[a.a] != 1)
 				DebugBreak();
 		}
 
@@ -116,7 +121,7 @@ unsigned int __stdcall ThreadFunc(void* arg)
 
 int main()
 {
-	TestStruct t;
+	//TestStruct t;
 
 	//g_Stack1.Push(t);
 

@@ -116,6 +116,7 @@ unsigned int __stdcall ThreadFunc(void* arg)
 
 int main()
 {
+	static_assert(sizeof(void*) == 8, "64-bit code generation is not supported.");
 	TestStruct t;
 
 	g_Stack1.Push(t);

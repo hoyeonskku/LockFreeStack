@@ -55,6 +55,7 @@ template <typename T>
 class CLockFreeStack
 {
 public:
+	static_assert(alignof(T) <= 16, "16초과 얼라인 지원 ㄴㄴ");
 	CLockFreeStack() : _pool(0)
 	{
 
@@ -104,6 +105,7 @@ public:
 		while ((Node<T>*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pReleaseNodeNextValue, (unsigned long long)pReleaseNodeValue) != pReleaseNodeValue);
 
 		memcpy((void*)&data, pReleaseNode->_value, sizeof(T));
+		((T*)pReleaseNode->_value)->~T();
 		//LogClass<T> logClass;
 		//logClass._pCurrent = (Node<T>*) MAKE_NODE(pReleaseNodeValue);
 		//logClass._pNext = (Node<T>*)MAKE_NODE(pReleaseNodeNextValue);
@@ -120,7 +122,6 @@ public:
 		Node<T>* pReleaseNodeValue;
 		Node<T>* pReleaseNodeNextValue;
 		if ((Node<T>*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pReleaseNodeNextValue, (unsigned long long)pReleaseNodeValue) == pReleaseNodeValue);
-		
 		{
 			pReleaseNodeValue = _pTopNodeValue;
 			pReleaseNode = (Node<T>*) MAKE_NODE(pReleaseNodeValue);
@@ -129,17 +130,16 @@ public:
 			pReleaseNodeNextValue = pReleaseNode->_pNextValue;
 			// top이 제거하려는 노드인 경우에만 Pop, next를 새로운 top으로 변경
 
-			memcpy((void*)&data, pReleaseNode->_value, sizeof(T));
+			memcpy((void*)&data, pReleaseNode->_value, sizeof(T));		
+			((T)pReleaseNode->_value).~T();
 			//LogClass<T> logClass;
 			//logClass._pCurrent = (Node<T>*) MAKE_NODE(pReleaseNodeValue);
 			//logClass._pNext = (Node<T>*)MAKE_NODE(pReleaseNodeNextValue);
 			//logClass._type = StackEventType::pop;
 			//_logQueue.Enqueue(logClass);
-
 			_pool.Free(pReleaseNode);
 			return true;
 		}
-
 		return false;
 	}
 
