@@ -22,7 +22,7 @@ struct TestStruct
 
 unsigned long long g_data = 0;
 CLockFreeStack<unsigned long long> g_Stack;
-CLockFreeStack<TestStruct> g_Stack1;
+//CLockFreeStack<TestStruct> g_Stack1;
 
 unsigned long long arr[10001];
 
@@ -33,21 +33,21 @@ unsigned int __stdcall ThreadFunc(void* arg)
 	}*/
 	{
 
-			/*for (int i = 0; i < 2000; i++)
-			{
-				int data = InterlockedIncrement(&g_data);
-				g_Stack.Push(data);
-			}
+		for (int i = 0; i < 2000; i++)
+		{
+			int data = InterlockedIncrement(&g_data);
+			g_Stack.Push(data);
+		}
 
-			for (int i = 0; i < 2000; i++)
-			{
-				unsigned long long a;
-				g_Stack.Pop(a);
-				arr[a]++;
-				if (arr[a] != 1)
-					DebugBreak();
-			}*/
-		
+		for (int i = 0; i < 2000; i++)
+		{
+			unsigned long long a;
+			g_Stack.Pop(a);
+			arr[a]++;
+			if (arr[a] != 1)
+				DebugBreak();
+		}
+
 	}
 
 	return true;
@@ -118,7 +118,7 @@ int main()
 {
 	TestStruct t;
 
-	g_Stack1.Push(t);
+	//g_Stack1.Push(t);
 
 	HANDLE _handle[5];
 	for (int i = 0; i < 5; i++)

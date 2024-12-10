@@ -21,7 +21,7 @@ public:
 	~Node<T>() {}
 
 public:
-	T _value;
+	alignas(sizeof(T)) char _value[sizeof(T)];
 	Node<T>* _pNextValue = nullptr;
 };
 
@@ -59,9 +59,9 @@ public:
 	{
 
 	}
-	~CLockFreeStack() 
-	{ 
-	
+	~CLockFreeStack()
+	{
+
 	}
 
 	void Push(T data)
@@ -70,7 +70,7 @@ public:
 		Node<T>* pNewNodeValue;
 		Node<T>* pNewNodeNextValue;
 		pNewNode = _pool.Alloc();
-		pNewNode->_value = data;
+		new ((char*)pNewNode + offsetof(Node<T>, _value)) T(data);
 		pNewNodeValue = (Node<T>*)MAKE_VALUE(_id, pNewNode);
 		do
 		{
@@ -102,7 +102,8 @@ public:
 		}
 		// top이 제거하려는 노드인 경우에만 Pop, next를 새로운 top으로 변경
 		while ((Node<T>*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pReleaseNodeNextValue, (unsigned long long)pReleaseNodeValue) != pReleaseNodeValue);
-		data = pReleaseNode->_value;
+
+		memcpy((void*)&data, pReleaseNode->_value, sizeof(T));
 		//LogClass<T> logClass;
 		//logClass._pCurrent = (Node<T>*) MAKE_NODE(pReleaseNodeValue);
 		//logClass._pNext = (Node<T>*)MAKE_NODE(pReleaseNodeNextValue);
@@ -111,6 +112,35 @@ public:
 
 		_pool.Free(pReleaseNode);
 		return true;
+	}
+	
+	bool TryPop(T& data)
+	{
+		Node<T>* pReleaseNode;
+		Node<T>* pReleaseNodeValue;
+		Node<T>* pReleaseNodeNextValue;
+		if ((Node<T>*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pReleaseNodeNextValue, (unsigned long long)pReleaseNodeValue) == pReleaseNodeValue);
+		
+		{
+			pReleaseNodeValue = _pTopNodeValue;
+			pReleaseNode = (Node<T>*) MAKE_NODE(pReleaseNodeValue);
+			if (pReleaseNodeValue == nullptr)
+				DebugBreak();
+			pReleaseNodeNextValue = pReleaseNode->_pNextValue;
+			// top이 제거하려는 노드인 경우에만 Pop, next를 새로운 top으로 변경
+
+			memcpy((void*)&data, pReleaseNode->_value, sizeof(T));
+			//LogClass<T> logClass;
+			//logClass._pCurrent = (Node<T>*) MAKE_NODE(pReleaseNodeValue);
+			//logClass._pNext = (Node<T>*)MAKE_NODE(pReleaseNodeNextValue);
+			//logClass._type = StackEventType::pop;
+			//_logQueue.Enqueue(logClass);
+
+			_pool.Free(pReleaseNode);
+			return true;
+		}
+
+		return false;
 	}
 
 private:

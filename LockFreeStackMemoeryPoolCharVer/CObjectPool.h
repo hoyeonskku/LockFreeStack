@@ -89,7 +89,7 @@ public:
 			{
 				new ((char*)newNode + offsetof(st_BLOCK_NODE, _data)) DATA();
 			}
-			newNode->_pNextValue = (st_BLOCK_NODE*) MAKE_VALUE(_id, nextNode);
+			newNode->_pNextValue = (st_BLOCK_NODE*)MAKE_VALUE(_id, nextNode);
 			nextNode = newNode;
 		}
 #endif
@@ -164,7 +164,7 @@ public:
 			{
 				new ((char*)pReleaseNode + offsetof(st_BLOCK_NODE, _data)) DATA;
 			}
-			pReleaseNextNodeValue =pReleaseNode->_pNextValue;
+			pReleaseNextNodeValue = pReleaseNode->_pNextValue;
 			/*if (!Release)
 				return;*/
 		}
@@ -222,7 +222,7 @@ public:
 			pBlockNode->_pNextValue = pBlockNextValue;
 		}
 		// top이 저장한 값과 같은 경우에만 Push, 노드를 새로운 top으로 변경
-		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) &_pTopNodeValue, (unsigned long long) pBlockValue, (unsigned long long) pBlockNextValue) != pBlockNextValue);
+		while ((st_BLOCK_NODE*)InterlockedCompareExchange((unsigned long long*) & _pTopNodeValue, (unsigned long long) pBlockValue, (unsigned long long) pBlockNextValue) != pBlockNextValue);
 		return true;
 #endif
 	};
